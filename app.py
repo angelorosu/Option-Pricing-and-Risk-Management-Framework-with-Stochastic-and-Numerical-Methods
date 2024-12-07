@@ -2,13 +2,15 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-
+import plotly.express as px
 # Import your core models from core/ folder
 from core.stochastic import GBMModel, HestonModel, VarianceGammaModel
 from core.fixed_income import CIRModel
 from core.pricing import BlackScholesPricing, MonteCarloPricing
 from core.risk import VaRCalculator
 from core.fixed_income import VasicekModel, CIRModel, BondPricing, YieldCurve
+from utils.visualization import generate_volatility_surface, plot_volatility_surface
+
 
 # Set up the main page
 st.set_page_config(page_title="Finance Dashboard", layout="wide")
@@ -51,6 +53,21 @@ elif page == "Stochastic Models":
             paths = vg.generate_path()
         
         st.line_chart(paths.T)
+        # **NEW** Plot the histogram of final prices
+        st.subheader(f"Histogram of Final Prices for {model_type} Model")
+        
+        # Extract final prices from the paths
+        final_prices = paths[:, -1]
+
+        # **Plotly Interactive Histogram**
+        fig = px.histogram(
+            final_prices,
+            nbins=50, 
+            title=f"Histogram of Final Prices for {model_type} Model",
+            labels={'value': 'Final Price', 'count': 'Frequency'}
+        )
+        fig.update_layout(bargap=0.1)
+        st.plotly_chart(fig, use_container_width=True)
 
 # Option Pricing Page
 elif page == "Option Pricing":
@@ -68,6 +85,47 @@ elif page == "Option Pricing":
             price = mc.price(paths)
         st.write(f"Option Price: {price:.2f}")
 
+        # === NEW SECTION FOR VOLATILITY SURFACE ===
+    st.write("---")
+    st.title("📈 Volatility Surface Visualization")
+    
+    # Volatility Surface Parameters (Sliders in the Sidebar)
+    st.sidebar.title("Volatility Surface Controls")
+    
+    strike_min = st.sidebar.number_input("Minimum Strike Price", min_value=0, max_value=200, value=50)
+    strike_max = st.sidebar.number_input("Maximum Strike Price", min_value=0, max_value=200, value=150)
+    strike_step = st.sidebar.slider("Strike Step", min_value=1, max_value=10, value=5)
+
+    maturity_min = st.sidebar.slider("Minimum Maturity (Years)", min_value=0.01, max_value=2.0, value=0.1, step=0.01)
+    maturity_max = st.sidebar.slider("Maximum Maturity (Years)", min_value=0.1, max_value=5.0, value=2.0, step=0.1)
+    maturity_step = st.sidebar.slider("Maturity Step", min_value=0.01, max_value=0.5, value=0.1)
+
+    base_vol = st.sidebar.slider("Base Volatility (ATM)", min_value=0.01, max_value=1.0, value=0.2, step=0.01)
+    smile_factor = st.sidebar.slider("Smile Factor", min_value=0.01, max_value=0.5, value=0.1, step=0.01)
+    time_decay_factor = st.sidebar.slider("Time Decay Factor", min_value=0.01, max_value=0.1, value=0.02, step=0.01)
+    
+    if st.button('Show Volatility Surface'):
+        st.write("### Interactive Volatility Surface")
+        
+        # Call the function to generate the surface
+        strikes, maturities, vol_surface = generate_volatility_surface(
+            strike_range=(strike_min, strike_max),
+            maturity_range=(maturity_min, maturity_max),
+            strike_step=strike_step,
+            maturity_step=maturity_step,
+            base_vol=base_vol,
+            smile_factor=smile_factor,
+            time_decay_factor=time_decay_factor
+        )
+        
+        # Call the function to plot the surface **inside Streamlit**
+        # Store the returned figure in a variable
+        fig = plot_volatility_surface(strikes, maturities, vol_surface)
+
+        # Pass the figure to Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+    
 # Risk Analytics Page
 elif page == "Risk Analytics":
     st.title("📉 Risk Analytics")
