@@ -41,7 +41,7 @@ elif page == "Stochastic Models":
             gbm = GBMModel(S0, mu=0.05, sigma=0.2, T=T, steps=steps, paths=paths)
             paths = gbm.generate_path()
         elif model_type == "Heston":
-            heston = HestonModel(S0, T, steps, paths, v0=0.04, kappa=2.0, theta=0.04, rho=-0.7, mu=0.05)
+            heston = HestonModel(S0, T, steps, paths, v0=0.04, kappa=2.0, theta=0.04, rho=-0.7, mu=0.05,sigma=0.3)
             paths, _ = heston.generate_path()
         elif model_type == "CIR":
             cir = CIRModel(r0=0.03, a=0.1, b=0.04, sigma=0.01, T=T, steps=steps, paths=paths)
